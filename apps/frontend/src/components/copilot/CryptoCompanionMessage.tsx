@@ -8,11 +8,21 @@ import {
 import {
   buildCryptoBriefFromMessages,
   buildCryptoLiveProcess,
+  buildCryptoProcessFromMessages,
+  parseToolResult,
 } from "@/lib/crypto/brief";
 import type {
   CryptoProcessSummary,
 } from "@/lib/crypto/brief";
 import type { CryptoBriefResponse } from "@/lib/crypto/types";
+
+const companionCache = new Map<
+  string,
+  {
+    brief?: CryptoBriefResponse;
+    process?: CryptoProcessSummary | null;
+  }
+>();
 
 type MessageLike = {
   id?: string;
@@ -25,6 +35,27 @@ function roleOf(message: MessageLike): string | undefined {
   if (message.role) return message.role;
   if (message.type === "ai") return "assistant";
   return message.type;
+}
+
+function findMessageIndex(messages: MessageLike[], target: MessageLike): number {
+  if (target.id) {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.id === target.id) return i;
+    }
+  }
+
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i] === target) return i;
+  }
+
+  return -1;
+}
+
+function isCryptoToolPayload(payload: unknown): payload is {
+  cryptoBrief?: CryptoBriefResponse;
+  cryptoProcess?: CryptoProcessSummary;
+} {
+  return Boolean(payload) && typeof payload === "object";
 }
 
 export function CryptoCompanionMessage({
@@ -56,37 +87,82 @@ export function CryptoCompanionMessage({
 
   if (position !== "after") return null;
 
-  if (roleOf(message) !== "assistant") return null;
-  const lastAssistantId = (() => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const item = messages[i];
-      if (!item || typeof item !== "object") continue;
-      const candidate = item as MessageLike;
-      if (roleOf(candidate) === "assistant") return candidate.id;
-    }
-    return undefined;
-  })();
-  const isLatestAssistant = Boolean(lastAssistantId && message.id && lastAssistantId === message.id);
+  if (roleOf(message) === "tool" && typeof message.content === "string") {
+    const parsed = parseToolResult(message.content);
+    if (!isCryptoToolPayload(parsed)) return null;
 
-  const derivedBrief = buildCryptoBriefFromMessages(messages);
+    const brief = parsed.cryptoBrief;
+    const process =
+      parsed.cryptoProcess ??
+      (brief ? buildCryptoProcessFromMessages([message], brief) : null);
+
+    if (!brief && !process) return null;
+    if (message.id) {
+      companionCache.set(message.id, { brief, process });
+    }
+    const cached = message.id ? companionCache.get(message.id) : undefined;
+    const resolvedBrief = brief ?? cached?.brief;
+    const resolvedProcess = process ?? cached?.process;
+
+    if (resolvedBrief) {
+      return (
+        <CryptoBriefCompanion
+          brief={resolvedBrief}
+          process={resolvedProcess}
+          compact
+          showProcess={false}
+        />
+      );
+    }
+
+    if (resolvedProcess) {
+      return <CryptoProcessPanel process={resolvedProcess} />;
+    }
+
+    return null;
+  }
+
+  if (roleOf(message) !== "assistant") return null;
+  const typedMessages = messages.filter(
+    (item): item is MessageLike => Boolean(item) && typeof item === "object",
+  );
+  const messageIndex = findMessageIndex(typedMessages, message);
+  const lastAssistantIndex = (() => {
+    for (let i = typedMessages.length - 1; i >= 0; i -= 1) {
+      if (roleOf(typedMessages[i]) === "assistant") return i;
+    }
+    return -1;
+  })();
+  const resolvedMessageIndex =
+    messageIndex >= 0 ? messageIndex : lastAssistantIndex;
+  if (resolvedMessageIndex < 0) return null;
+  const isLatestAssistant = resolvedMessageIndex === lastAssistantIndex;
+  const history = typedMessages.slice(0, resolvedMessageIndex + 1);
+
+  const derivedBrief = buildCryptoBriefFromMessages(history);
+  const derivedProcess = buildCryptoLiveProcess(
+    history,
+    derivedBrief,
+    isLatestAssistant && isRunning,
+  );
   const brief =
     stateSnapshot?.cryptoBrief ??
-    (isLatestAssistant ? derivedBrief : null) ??
+    derivedBrief ??
     (isLatestAssistant ? liveState?.cryptoBrief : undefined);
   const process =
     stateSnapshot?.cryptoProcess ??
     (isLatestAssistant ? liveState?.cryptoProcess : undefined) ??
-    (isLatestAssistant ? buildCryptoLiveProcess(messages, brief, isRunning) : null);
+    derivedProcess;
 
-  if (isLatestAssistant && isRunning && process) return null;
-
-  if (brief) {
-    return <CryptoBriefCompanion brief={brief} process={process} compact showProcess={false} />;
+  if (message.id && (brief || process)) {
+    companionCache.set(message.id, { brief, process });
   }
+  const cached = message.id ? companionCache.get(message.id) : undefined;
+  const resolvedBrief = brief ?? cached?.brief;
+  const resolvedProcess = process ?? cached?.process;
 
-  if (process) {
-    return <CryptoProcessPanel process={process} />;
-  }
+  if (isLatestAssistant && isRunning && resolvedProcess) return null;
 
+  // For assistant placeholders, rely on tool-message companion cards.
   return null;
 }

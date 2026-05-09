@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
   CopilotChat,
@@ -28,6 +28,27 @@ import {
   demoQuestions,
 } from "@/lib/crypto/demo";
 import type { CryptoBriefResponse } from "@/lib/crypto/types";
+
+type MessageLike = {
+  role?: string;
+  type?: string;
+  content?: unknown;
+};
+
+function roleOf(message: MessageLike): string | undefined {
+  if (message.role) return message.role;
+  if (message.type === "human") return "user";
+  if (message.type === "ai") return "assistant";
+  return message.type;
+}
+
+function normalizePrompt(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -93,6 +114,8 @@ function briefSignature(brief: CryptoBriefResponse | null): string {
 
 function CanvasInner() {
   const { agent } = useAgent();
+  const chatPanelRef = useRef<HTMLElement | null>(null);
+  const [insertedPromptSet, setInsertedPromptSet] = useState<Set<string>>(new Set());
   const state = (agent?.state as { cryptoBrief?: unknown; messages?: unknown[] }) ?? {};
   const messageSource =
     (Array.isArray(state.messages) && state.messages.length > 0
@@ -116,6 +139,43 @@ function CanvasInner() {
   const suggestionSignature = suggestionSet
     .map((suggestion) => `${suggestion.title}|${suggestion.message}`)
     .join("||");
+  const completedPromptSet = useMemo(() => {
+    const completed = new Set<string>();
+    if (!Array.isArray(messageSource)) return completed;
+    for (const item of messageSource) {
+      if (!item || typeof item !== "object") continue;
+      const message = item as MessageLike;
+      if (roleOf(message) !== "user") continue;
+      if (typeof message.content !== "string") continue;
+      completed.add(normalizePrompt(message.content));
+    }
+    return completed;
+  }, [messageSource]);
+  const scriptSteps = useMemo(
+    () =>
+      demoConversationScript.map((step) => ({
+        ...step,
+        done: completedPromptSet.has(normalizePrompt(step.message)),
+      })),
+    [completedPromptSet],
+  );
+  const pendingScriptSteps = scriptSteps.filter((step) => !step.done);
+  const completedScriptCount = scriptSteps.length - pendingScriptSteps.length;
+
+  const insertIntoChatInput = (value: string) => {
+    const root = chatPanelRef.current;
+    if (!root) return;
+    const textArea = root.querySelector("textarea");
+    if (!(textArea instanceof HTMLTextAreaElement)) return;
+
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    setter?.call(textArea, value);
+    textArea.dispatchEvent(new Event("input", { bubbles: true }));
+    textArea.focus();
+  };
 
   useEffect(() => {
     if (!agent) return;
@@ -196,13 +256,13 @@ function CanvasInner() {
     <div className="grid h-screen grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(340px,42vh)] overflow-hidden bg-background xl:grid-cols-[minmax(0,1fr)_420px] xl:grid-rows-1">
       <main className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-5 md:px-6">
         <section className="rounded-lg border border-border bg-card p-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+          <div className="flex flex-wrap items-start justify-between gap-4 md:flex-nowrap">
+            <div className="min-w-0 flex-1">
               <p className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
                 ChainLens
               </p>
-              <h1 className="mt-1 text-xl font-semibold">Crypto Intelligence Copilot</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              <h1 className="mt-1 text-xl font-semibold sm:whitespace-nowrap">Crypto Intelligence Copilot</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Ask about assets, risk, Cardano projects, and ecosystem events. The chat explains the path; the canvas turns the result into structured UI.
               </p>
             </div>
@@ -214,23 +274,69 @@ function CanvasInner() {
           <p className="mt-3 border-t border-border pt-3 text-xs text-amber-700">
             {brief?.disclaimer ?? DEFAULT_DISCLAIMER}
           </p>
-          <details className="mt-3 rounded-md border border-border bg-background px-3 py-2">
-            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Demo Conversation Script
+          <details className="mt-3 rounded-md border border-border bg-background px-2.5 py-2">
+            <summary className="cursor-pointer list-none">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Demo Conversation Script
+                </p>
+                <p className="font-mono text-[9px] uppercase text-muted-foreground">
+                  {completedScriptCount}/{scriptSteps.length} complete
+                </p>
+              </div>
             </summary>
-            <ol className="mt-3 grid gap-2 text-xs text-muted-foreground">
-              {demoConversationScript.map((step, index) => (
-                <li key={step.title} className="rounded-md border border-border bg-card px-2.5 py-2">
-                  <p className="font-medium text-foreground">
-                    {index + 1}. {step.title}
-                  </p>
-                  <p className="mt-1">{step.message}</p>
-                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                    {step.expectedTool} {"->"} {step.expectedResult}
-                  </p>
-                </li>
-              ))}
-            </ol>
+
+            {pendingScriptSteps.length === 0 ? (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                All scripted prompts are complete in this thread. Start a new thread to replay.
+              </p>
+            ) : (
+              <ol className="mt-1.5 grid gap-1.5 text-[11px] text-muted-foreground">
+                {pendingScriptSteps.map((step, index) => (
+                  <li key={step.title} className="rounded-md border border-border bg-card px-2 py-1.5">
+                    {(() => {
+                      const promptKey = normalizePrompt(step.message);
+                      const isInserted = insertedPromptSet.has(promptKey);
+                      return (
+                        <>
+                          <div className="flex items-start justify-between gap-2">
+                            <p className={["text-[11px] font-medium text-foreground", isInserted ? "line-through opacity-70" : ""].join(" ")}>
+                              {index + 1}. {step.title}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                insertIntoChatInput(step.message);
+                                setInsertedPromptSet((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(promptKey);
+                                  return next;
+                                });
+                              }}
+                              disabled={isInserted}
+                              className={[
+                                "rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition",
+                                isInserted
+                                  ? "cursor-not-allowed border-border/60 text-muted-foreground/70"
+                                  : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+                              ].join(" ")}
+                            >
+                              {isInserted ? "Inserted" : "Insert"}
+                            </button>
+                          </div>
+                          <p className={["mt-0.5 leading-tight", isInserted ? "line-through opacity-70" : ""].join(" ")}>
+                            {step.message}
+                          </p>
+                          <p className={["mt-0.5 font-mono text-[10px] leading-tight text-muted-foreground", isInserted ? "opacity-70" : ""].join(" ")}>
+                            {step.expectedTool} {"->"} {step.expectedResult}
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </li>
+                ))}
+              </ol>
+            )}
           </details>
         </section>
 
@@ -261,7 +367,7 @@ function CanvasInner() {
         )}
       </main>
 
-      <aside className="min-h-0 border-t border-border bg-muted/20 xl:border-l xl:border-t-0">
+      <aside ref={chatPanelRef} className="min-h-0 border-t border-border bg-muted/20 xl:border-l xl:border-t-0">
         <CopilotChat
           className="h-full"
           suggestionView={CryptoSuggestionView}

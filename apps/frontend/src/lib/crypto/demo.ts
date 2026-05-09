@@ -6,6 +6,11 @@ export const demoQuestions = [
   { title: "Week recap", message: "What happened this week in the Cardano ecosystem?" },
 ];
 
+const GENERATIVE_UI_SUGGESTION = {
+  title: "Generative UI",
+  message: "Generate an interactive UI for ADA risk analysis.",
+};
+
 export const demoConversationScript = [
   {
     title: "Open with market context",
@@ -42,6 +47,12 @@ export const demoConversationScript = [
     message: "Show me Cardano projects to watch.",
     expectedTool: "get_cardano_projects",
     expectedResult: "Projects table with maturity and risk.",
+  },
+  {
+    title: "Generative UI mode",
+    message: "Generate an interactive UI for ADA risk analysis.",
+    expectedTool: "render_a2ui",
+    expectedResult: "Interactive A2UI surface rendered in chat/canvas.",
   },
 ];
 
@@ -122,6 +133,13 @@ function dedupeSuggestions(input: Suggestion[]): Suggestion[] {
   return output;
 }
 
+function withGenerativeUiSuggestion(input: Suggestion[]): Suggestion[] {
+  return dedupeSuggestions([
+    GENERATIVE_UI_SUGGESTION,
+    ...input,
+  ]);
+}
+
 export function buildContextualSuggestions(
   brief: BriefLike | null,
   messages: unknown,
@@ -133,11 +151,11 @@ export function buildContextualSuggestions(
   const symbol = inferSymbolFromBrief(brief) ?? inferSymbolFromText(userPrompt) ?? "ADA";
 
   if (!brief) {
-    return demoQuestions;
+    return withGenerativeUiSuggestion(demoQuestions);
   }
 
   if (brief.intent === "asset_brief") {
-    return dedupeSuggestions([
+    return withGenerativeUiSuggestion([
       { title: `What Is ${symbol}?`, message: `What is ${symbol}? Include tokenomics, risks, and catalysts.` },
       { title: `Compare ${symbol} Vs BTC/ETH`, message: `Compare ${symbol}, BTC, and ETH.` },
       { title: `${symbol} Risk Signals`, message: `Show risk signals for ${symbol}.` },
@@ -147,7 +165,7 @@ export function buildContextualSuggestions(
   }
 
   if (brief.intent === "ecosystem_overview") {
-    return dedupeSuggestions([
+    return withGenerativeUiSuggestion([
       { title: `Compare ${symbol} Vs BTC/ETH`, message: `Compare ${symbol}, BTC, and ETH.` },
       { title: `${symbol} Market Brief`, message: `Give me a quick market brief for ${symbol}.` },
       { title: `${symbol} Risk Signals`, message: `Show risk signals for ${symbol}.` },
@@ -157,7 +175,7 @@ export function buildContextualSuggestions(
   }
 
   if (brief.intent === "asset_comparison") {
-    return dedupeSuggestions([
+    return withGenerativeUiSuggestion([
       { title: `Deep Dive ${symbol}`, message: `What is ${symbol}? Include tokenomics, risks, and catalysts.` },
       { title: "Cardano Brief", message: "Give me a quick brief about Cardano today." },
       { title: "Risk Delta", message: "Which of ADA, BTC, and ETH has the highest risk in this dataset and why?" },
@@ -166,7 +184,7 @@ export function buildContextualSuggestions(
   }
 
   if (brief.intent === "risk_analysis") {
-    return dedupeSuggestions([
+    return withGenerativeUiSuggestion([
       { title: "Explain Risk Drivers", message: "Explain the top risk drivers in plain language." },
       { title: "Compare Majors", message: "Compare ADA, BTC, and ETH." },
       { title: "Cardano Events", message: "What happened this week in the Cardano ecosystem?" },
@@ -175,7 +193,7 @@ export function buildContextualSuggestions(
   }
 
   if (brief.intent === "recent_events") {
-    return dedupeSuggestions([
+    return withGenerativeUiSuggestion([
       { title: "Cardano Brief", message: "Give me a quick brief about Cardano today." },
       { title: "Compare Majors", message: "Compare ADA, BTC, and ETH." },
       { title: "Projects To Watch", message: "Show me Cardano projects to watch." },
@@ -183,7 +201,7 @@ export function buildContextualSuggestions(
     ]);
   }
 
-  return dedupeSuggestions([
+  return withGenerativeUiSuggestion([
     ...demoQuestions,
     { title: `What Is ${symbol}?`, message: `What is ${symbol}? Include tokenomics, risks, and catalysts.` },
   ]);
