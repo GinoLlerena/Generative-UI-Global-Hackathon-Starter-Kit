@@ -22,9 +22,9 @@ const splineMono = Spline_Sans_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AG-UI Canvas | CopilotKit Hackathon Starter",
+  title: "ChainLens | Crypto Intelligence Copilot",
   description:
-    "Hackathon starter kit: CopilotKit canvas + threads drawer + Deep Agents + Gemini + Notion MCP",
+    "Crypto intelligence demo with CopilotKit, LangGraph, and controlled generative UI.",
 };
 
 export default function RootLayout({

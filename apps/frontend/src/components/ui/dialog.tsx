@@ -56,7 +56,7 @@ function DialogContent({
   showCloseButton?: boolean;
   /**
    * Whether to render the dimmed backdrop overlay. Default true. Set to
-   * `false` for non-blocking floating panels (e.g. the lead profile modal,
+   * `false` for non-blocking floating panels (e.g. side utility panels,
    * which needs to coexist with the CopilotKit chat sidebar — the user
    * must still be able to type in chat with the panel open).
    */

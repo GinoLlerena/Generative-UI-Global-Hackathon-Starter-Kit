@@ -1,16 +1,10 @@
-# Threads / Intelligence walkthrough
+# Threads
 
-The threads drawer surfaces every conversation the user has had with the agent on this machine. Threads live in the **Intelligence composite container** (Postgres-backed). When you reload, the active thread is restored.
+With Intelligence running, CopilotKit threads are durable across reloads.
 
-- **Search** the loaded set client-side; click "Load more" or "Search older threads" to paginate further.
-- **Archive** to hide threads you're done with; toggle the filter to view archived.
-- **Restore** brings them back; **Delete** is permanent.
-- **Theme toggle** in the drawer footer.
+If threads are not persisting:
+1. Ensure Docker services are healthy.
+2. Ensure BFF can reach Intelligence endpoints.
+3. Ensure frontend is using `/api/copilotkit` runtime URL.
 
-To wipe all threads and start fresh:
-
-```bash
-npm run dev:infra:down
-docker volume rm $(docker volume ls -q | grep intelligence)
-npm run dev:infra
-```
+Thread durability is complementary to the crypto canvas flow; canvas rendering should still work without historical thread restore.
