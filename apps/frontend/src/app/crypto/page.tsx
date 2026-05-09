@@ -50,6 +50,15 @@ function normalizePrompt(text: string): string {
     .trim();
 }
 
+function chooseMessageHistory(
+  primary: unknown[] | undefined,
+  secondary: unknown[] | undefined,
+): unknown[] {
+  const first = Array.isArray(primary) ? primary : [];
+  const second = Array.isArray(secondary) ? secondary : [];
+  return second.length > first.length ? second : first;
+}
+
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -116,25 +125,24 @@ function CanvasInner() {
   const { agent } = useAgent();
   const chatPanelRef = useRef<HTMLElement | null>(null);
   const [insertedPromptSet, setInsertedPromptSet] = useState<Set<string>>(new Set());
+  const [stickyBrief, setStickyBrief] = useState<CryptoBriefResponse | null>(null);
   const state = (agent?.state as { cryptoBrief?: unknown; messages?: unknown[] }) ?? {};
-  const messageSource =
-    (Array.isArray(state.messages) && state.messages.length > 0
-      ? state.messages
-      : agent?.messages) ?? [];
+  const messageSource = chooseMessageHistory(agent?.messages, state.messages);
   const derivedBrief = buildCryptoBriefFromMessages(messageSource);
   const stateBrief = normalizeCryptoBrief(state.cryptoBrief);
   const derivedSignature = briefSignature(derivedBrief);
   const stateSignature = briefSignature(stateBrief);
   const brief = derivedBrief ?? stateBrief;
+  const displayBrief = brief ?? stickyBrief;
   const liveProcess = buildCryptoLiveProcess(
     messageSource,
-    brief,
+    displayBrief,
     Boolean(agent?.isRunning),
   );
   const runningSteps = agent?.isRunning ? (liveProcess?.steps ?? []) : [];
   const suggestionSet = useMemo(
-    () => buildContextualSuggestions(brief, messageSource, Boolean(agent?.isRunning)),
-    [brief, messageSource, agent?.isRunning],
+    () => buildContextualSuggestions(displayBrief, messageSource, Boolean(agent?.isRunning)),
+    [displayBrief, messageSource, agent?.isRunning],
   );
   const suggestionSignature = suggestionSet
     .map((suggestion) => `${suggestion.title}|${suggestion.message}`)
@@ -183,6 +191,11 @@ function CanvasInner() {
     if (derivedSignature === stateSignature) return;
     agent.setState({ ...(agent.state ?? {}), cryptoBrief: derivedBrief });
   }, [agent, derivedBrief, derivedSignature, stateSignature]);
+
+  useEffect(() => {
+    if (!brief) return;
+    setStickyBrief(brief);
+  }, [brief]);
 
   useConfigureSuggestions({
     available: suggestionSet.length > 0 ? "always" : "before-first-message",
@@ -249,7 +262,7 @@ function CanvasInner() {
     },
   });
 
-  const uiBlocks = brief?.uiBlocks ?? [];
+  const uiBlocks = displayBrief?.uiBlocks ?? [];
   const blockCount = uiBlocks.length;
 
   return (
@@ -272,7 +285,7 @@ function CanvasInner() {
             </div>
           </div>
           <p className="mt-3 border-t border-border pt-3 text-xs text-amber-700">
-            {brief?.disclaimer ?? DEFAULT_DISCLAIMER}
+            {displayBrief?.disclaimer ?? DEFAULT_DISCLAIMER}
           </p>
           <details className="mt-3 rounded-md border border-border bg-background px-2.5 py-2">
             <summary className="cursor-pointer list-none">
@@ -340,7 +353,7 @@ function CanvasInner() {
           </details>
         </section>
 
-        {!brief ? (
+        {!displayBrief ? (
           <section className="grid min-h-[360px] place-items-center rounded-lg border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
             <div>
               <p className="font-semibold text-foreground">No intelligence view yet</p>
@@ -354,13 +367,13 @@ function CanvasInner() {
             <section className="rounded-lg border border-border bg-card p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-border bg-muted px-2.5 py-1 font-mono text-[10px] uppercase text-muted-foreground">
-                  {brief.intent.replaceAll("_", " ")}
+                  {displayBrief.intent.replaceAll("_", " ")}
                 </span>
                 <span className="font-mono text-[10px] uppercase text-muted-foreground">
                   mock dataset
                 </span>
               </div>
-              <p className="mt-3 max-w-4xl leading-relaxed text-foreground">{brief.answer}</p>
+              <p className="mt-3 max-w-4xl leading-relaxed text-foreground">{displayBrief.answer}</p>
             </section>
             <CryptoCanvas blocks={uiBlocks} />
           </>

@@ -58,6 +58,15 @@ function isCryptoToolPayload(payload: unknown): payload is {
   return Boolean(payload) && typeof payload === "object";
 }
 
+function chooseMessageHistory(
+  primary: unknown[] | undefined,
+  secondary: unknown[] | undefined,
+): unknown[] {
+  const first = Array.isArray(primary) ? primary : [];
+  const second = Array.isArray(secondary) ? secondary : [];
+  return second.length > first.length ? second : first;
+}
+
 export function CryptoCompanionMessage({
   message,
   position,
@@ -79,10 +88,10 @@ export function CryptoCompanionMessage({
     cryptoBrief?: CryptoBriefResponse;
     cryptoProcess?: CryptoProcessSummary;
   } | undefined;
-  const messages =
-    stateSnapshot?.messages ??
-    liveState?.messages ??
-    agent?.messages;
+  const messages = chooseMessageHistory(
+    agent?.messages,
+    stateSnapshot?.messages ?? liveState?.messages,
+  );
   if (!Array.isArray(messages)) return null;
 
   if (position !== "after") return null;
