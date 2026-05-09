@@ -10,23 +10,32 @@
  * keeps that wiring client-side, and the server layout just renders
  * <CopilotKitProviderShell>{children}</…>.
  *
- * The tool-call wildcard renderer lives inside the leads page via
+ * The tool-call wildcard renderer lives inside the crypto page via
  * `useDefaultRenderTool`, so any tool call without a dedicated render slot
  * surfaces as a small CopilotKit-branded card. No registry needed here.
  */
 
 import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+import { CryptoCompanionMessage } from "@/components/copilot/CryptoCompanionMessage";
+
+const renderCustomMessages = [
+  { agentId: "default", render: CryptoCompanionMessage },
+];
 
 export function CopilotKitProviderShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const openGenerativeUiEnabled =
+    process.env.NEXT_PUBLIC_COPILOTKIT_OPEN_GENERATIVE_UI === "1";
+
   return (
     <CopilotKitProvider
       runtimeUrl="/api/copilotkit"
       publicApiKey={process.env.NEXT_PUBLIC_COPILOT_CLOUD_PUBLIC_API_KEY}
-      openGenerativeUI={{}}
+      renderCustomMessages={renderCustomMessages}
+      {...(openGenerativeUiEnabled ? { openGenerativeUI: {} } : {})}
     >
       {children}
     </CopilotKitProvider>

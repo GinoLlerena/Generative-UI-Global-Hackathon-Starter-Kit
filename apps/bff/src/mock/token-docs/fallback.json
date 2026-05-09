@@ -1,0 +1,24 @@
+{
+  "symbol": "UNKNOWN",
+  "name": "Unknown",
+  "updatedAt": "2026-05-09",
+  "summary": "No dedicated mock document is available for this symbol. Fallback research template returned.",
+  "tokenomics": {
+    "supplyModel": "Unknown in demo",
+    "circulatingNarrative": "Unknown in demo",
+    "utility": ["Unknown in demo"]
+  },
+  "risks": ["Unknown in demo"],
+  "catalysts": [
+    { "title": "Unknown in demo", "horizon": "mid-term" }
+  ],
+  "faq": [
+    {
+      "q": "Is this data complete?",
+      "a": "No. This is a fallback mock document for unsupported symbols."
+    }
+  ],
+  "sources": [
+    { "title": "Mock Fallback Source", "url": "https://demo.local/research/fallback" }
+  ]
+}

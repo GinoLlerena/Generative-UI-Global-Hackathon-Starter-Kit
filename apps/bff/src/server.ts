@@ -5,6 +5,10 @@ import {
   createCopilotEndpoint,
 } from "@copilotkit/runtime/v2";
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
+import { Hono } from "hono";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const intelligence = new CopilotKitIntelligence({
   apiKey:
@@ -12,6 +16,10 @@ const intelligence = new CopilotKitIntelligence({
   apiUrl: process.env.INTELLIGENCE_API_URL ?? "http://localhost:4203",
   wsUrl: process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4403",
 });
+const disableIntelligence = process.env.COPILOTKIT_DISABLE_INTELLIGENCE === "1";
+const enableMcpApps = process.env.COPILOTKIT_ENABLE_MCP_APPS === "1";
+const enableOpenGenerativeUi = process.env.COPILOTKIT_OPEN_GENERATIVE_UI === "1";
+const enableA2uiTool = process.env.COPILOTKIT_ENABLE_A2UI_TOOL === "1";
 
 const agent = new LangGraphAgent({
   deploymentUrl:
@@ -25,26 +33,33 @@ const agent = new LangGraphAgent({
   },
 });
 
-const app = createCopilotEndpoint({
+const copilotApp = createCopilotEndpoint({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
-    intelligence,
+    ...(disableIntelligence ? {} : { intelligence }),
     identifyUser: () => ({ id: "default", name: "Hackathon User" }),
     licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
     agents: { default: agent },
-    openGenerativeUI: true,
-    a2ui: { injectA2UITool: false },
-    mcpApps: {
-      servers: [
-        {
-          type: "http",
-          url: process.env.MCP_SERVER_URL || "http://localhost:3001/mcp",
-          serverId: "manufact_local",
-        },
-      ],
-    },
+    openGenerativeUI: enableOpenGenerativeUi,
+    a2ui: { injectA2UITool: enableA2uiTool },
+    ...(enableMcpApps
+      ? {
+          mcpApps: {
+            servers: [
+              {
+                type: "http" as const,
+                url: process.env.MCP_SERVER_URL || "http://localhost:3001/mcp",
+                serverId: "manufact_local",
+              },
+            ],
+          },
+        }
+      : {}),
   }),
 });
+
+const app = new Hono();
+app.route("/", copilotApp);
 
 // Rewrite known 5xx error bodies into structured `{ error, hint, command }`
 // payloads the UI can render as actionable toasts. Conservative matching —
@@ -63,6 +78,10 @@ app.use("*", async (c, next) => {
   } catch {
     return;
   }
+  console.error(
+    `[copilotkit:bff] ${c.req.method} ${c.req.path} -> ${status} ` +
+      `body=${body.slice(0, 400).replace(/\s+/g, " ")}`,
+  );
   const isThreadFkey =
     body.includes("threads_user_id_fkey") ||
     (body.includes("Failed to initialize thread") &&
@@ -100,6 +119,37 @@ app.use("*", async (c, next) => {
     });
     return;
   }
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const TOKEN_DOCS_DIR = path.join(__dirname, "./mock/token-docs");
+
+function loadTokenDoc(symbol: string): Record<string, unknown> {
+  const fileName = `${symbol.toLowerCase()}.json`;
+  const fallbackName = "fallback.json";
+  const candidatePath = path.join(TOKEN_DOCS_DIR, fileName);
+  const fallbackPath = path.join(TOKEN_DOCS_DIR, fallbackName);
+
+  try {
+    return JSON.parse(readFileSync(candidatePath, "utf8")) as Record<string, unknown>;
+  } catch {
+    return JSON.parse(readFileSync(fallbackPath, "utf8")) as Record<string, unknown>;
+  }
+}
+
+app.get("/api/mock/token-docs/:symbol", (c) => {
+  const symbol = String(c.req.param("symbol") ?? "")
+    .trim()
+    .toUpperCase();
+  const doc = { ...loadTokenDoc(symbol || "unknown"), symbol: symbol || "UNKNOWN" };
+
+  return c.json({
+    symbol,
+    document: doc,
+    disclaimer:
+      "Demo only. Research notes are mocked and do not represent financial advice.",
+  });
 });
 
 const port = Number(process.env.PORT) || 4000;

@@ -22,7 +22,9 @@ from langgraph.graph.state import CompiledStateGraph
 
 from copilotkit import CopilotKitMiddleware
 
+from .crypto_state import CryptoStateMiddleware
 from .lead_state import LeadStateMiddleware
+from .stream_guard import StreamGuardMiddleware
 from .timing import TimingMiddleware
 
 
@@ -78,10 +80,12 @@ def build_graph(
         )
         runtime = "gemini-flash-deep"
 
+    stream_guard = StreamGuardMiddleware()
     timing = TimingMiddleware()
+    crypto_state = CryptoStateMiddleware()
     lead_state = LeadStateMiddleware()
     copilotkit = CopilotKitMiddleware()
-    middleware = [timing, lead_state, copilotkit]
+    middleware = [stream_guard, timing, crypto_state, lead_state, copilotkit]
 
     if runtime == "noop":
         return _build_noop(NOOP_FALLBACK_MESSAGE)

@@ -1,0 +1,28 @@
+{
+  "symbol": "BTC",
+  "name": "Bitcoin",
+  "updatedAt": "2026-05-09",
+  "summary": "Bitcoin remains the benchmark store-of-value asset in the mock dataset, with macro sensitivity and institutional flow narratives.",
+  "tokenomics": {
+    "supplyModel": "Capped issuance",
+    "circulatingNarrative": "High liquidity benchmark with broad global market access.",
+    "utility": ["Settlement", "Store of value narrative", "Collateral benchmark"]
+  },
+  "risks": [
+    "Macro policy shifts can change risk appetite abruptly.",
+    "Leverage cycles can increase drawdown depth."
+  ],
+  "catalysts": [
+    { "title": "Macro liquidity inflection", "horizon": "near-term" },
+    { "title": "Treasury allocation trends", "horizon": "mid-term" }
+  ],
+  "faq": [
+    {
+      "q": "Why compare other assets to BTC?",
+      "a": "It acts as the baseline liquidity and volatility reference in this demo."
+    }
+  ],
+  "sources": [
+    { "title": "Mock Research Note: BTC Macro", "url": "https://demo.local/research/btc-macro" }
+  ]
+}

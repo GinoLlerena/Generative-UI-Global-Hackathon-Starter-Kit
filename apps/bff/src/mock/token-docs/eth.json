@@ -1,0 +1,28 @@
+{
+  "symbol": "ETH",
+  "name": "Ethereum",
+  "updatedAt": "2026-05-09",
+  "summary": "Ethereum is modeled as a general-purpose smart-contract base layer with broad application diversity in the mock dataset.",
+  "tokenomics": {
+    "supplyModel": "Dynamic issuance/burn narrative",
+    "circulatingNarrative": "Network activity and fee dynamics shape supply pressure in this demo.",
+    "utility": ["Gas fees", "Security staking", "Base collateral in DeFi"]
+  },
+  "risks": [
+    "Fee sensitivity can affect user behavior during demand spikes.",
+    "Execution and roadmap complexity can influence sentiment."
+  ],
+  "catalysts": [
+    { "title": "L2 activity growth", "horizon": "near-term" },
+    { "title": "Protocol upgrade adoption", "horizon": "mid-term" }
+  ],
+  "faq": [
+    {
+      "q": "What stands out versus BTC in this demo?",
+      "a": "Utility breadth and application-layer dependence are the main differences."
+    }
+  ],
+  "sources": [
+    { "title": "Mock Research Note: ETH Utility", "url": "https://demo.local/research/eth-utility" }
+  ]
+}

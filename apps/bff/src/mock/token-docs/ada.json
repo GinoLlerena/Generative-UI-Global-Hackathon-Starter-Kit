@@ -1,0 +1,35 @@
+{
+  "symbol": "ADA",
+  "name": "Cardano",
+  "updatedAt": "2026-05-09",
+  "summary": "Cardano focuses on a research-first Layer 1 model with emphasis on governance, staking participation, and ecosystem reliability in the mock dataset.",
+  "tokenomics": {
+    "supplyModel": "Fixed max supply",
+    "circulatingNarrative": "Mock narrative highlights broad circulation and staking participation.",
+    "utility": ["Network fees", "Staking participation", "Governance signaling"]
+  },
+  "risks": [
+    "Throughput narrative depends on ecosystem execution milestones.",
+    "Adoption variance across regions and developer segments.",
+    "Market volatility can amplify short-term sentiment swings."
+  ],
+  "catalysts": [
+    { "title": "Governance milestone cadence", "horizon": "mid-term" },
+    { "title": "DeFi activity growth", "horizon": "near-term" },
+    { "title": "Infrastructure partner integrations", "horizon": "mid-term" }
+  ],
+  "faq": [
+    {
+      "q": "What is the primary utility in this demo?",
+      "a": "Network usage, staking, and governance are the primary utility themes."
+    },
+    {
+      "q": "Is this financial advice?",
+      "a": "No. This endpoint is mock research content for demo workflows only."
+    }
+  ],
+  "sources": [
+    { "title": "Mock Research Note: ADA 2026", "url": "https://demo.local/research/ada-2026" },
+    { "title": "Mock Ecosystem Digest", "url": "https://demo.local/research/ecosystem-digest" }
+  ]
+}
