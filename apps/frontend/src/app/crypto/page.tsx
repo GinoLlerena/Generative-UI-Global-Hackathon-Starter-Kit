@@ -11,11 +11,13 @@ import {
   useFrontendTool,
 } from "@copilotkit/react-core/v2";
 import { CryptoSuggestionView } from "@/components/copilot/CryptoSuggestionView";
+import { CryptoTaskProgress } from "@/components/copilot/CryptoTaskProgress";
 import { CryptoBriefCompanion } from "@/components/crypto-canvas/CryptoBriefCompanion";
 import { CryptoCanvas } from "@/components/crypto-canvas/CryptoCanvas";
 import { ToolFallbackCard } from "@/components/copilot/ToolFallbackCard";
 import {
   buildCryptoBriefFromMessages,
+  buildCryptoLiveProcess,
   buildCryptoProcessFromMessages,
   parseToolResult,
 } from "@/lib/crypto/brief";
@@ -101,6 +103,12 @@ function CanvasInner() {
   const derivedSignature = briefSignature(derivedBrief);
   const stateSignature = briefSignature(stateBrief);
   const brief = derivedBrief ?? stateBrief;
+  const liveProcess = buildCryptoLiveProcess(
+    messageSource,
+    brief,
+    Boolean(agent?.isRunning),
+  );
+  const runningSteps = agent?.isRunning ? (liveProcess?.steps ?? []) : [];
   const suggestionSet = useMemo(
     () => buildContextualSuggestions(brief, messageSource, Boolean(agent?.isRunning)),
     [brief, messageSource, agent?.isRunning],
@@ -258,6 +266,19 @@ function CanvasInner() {
           className="h-full"
           suggestionView={CryptoSuggestionView}
           input={{ disclaimer: () => null, className: "pb-6" }}
+          messageView={{
+            children: ({ messageElements, interruptElement }) => (
+              <div data-testid="copilot-message-list" className="flex flex-col">
+                {messageElements}
+                {runningSteps.length > 0 ? (
+                  <div className="px-3 pb-2">
+                    <CryptoTaskProgress steps={runningSteps} />
+                  </div>
+                ) : null}
+                {interruptElement}
+              </div>
+            ),
+          }}
         />
       </aside>
     </div>

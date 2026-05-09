@@ -78,22 +78,7 @@ export function CryptoCompanionMessage({
     (isLatestAssistant ? liveState?.cryptoProcess : undefined) ??
     (isLatestAssistant ? buildCryptoLiveProcess(messages, brief, isRunning) : null);
 
-  if (isLatestAssistant && isRunning && process) {
-    return (
-      <CryptoProcessPanel
-        process={process}
-        summary={
-          brief
-            ? {
-                intent: brief.intent,
-                answer: brief.answer,
-                blockCount: brief.uiBlocks?.length ?? 0,
-              }
-            : undefined
-        }
-      />
-    );
-  }
+  if (isLatestAssistant && isRunning && process) return null;
 
   if (brief) {
     return <CryptoBriefCompanion brief={brief} process={process} compact showProcess={false} />;

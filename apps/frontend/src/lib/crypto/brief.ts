@@ -517,15 +517,37 @@ export function buildCryptoLiveProcess(
 
   let latestToolName = "selecting_tool";
   let latestToolResult: unknown;
+  let latestToolIndex = -1;
+  let latestAssistantToolCallIndex = -1;
+
   for (let i = typedMessages.length - 1; i >= 0; i -= 1) {
     const candidate = typedMessages[i];
-    if (messageRole(candidate) !== "tool") continue;
-    const parsed = parseToolResult(candidate.content);
-    latestToolResult = parsed;
-    latestToolName = inferToolName(parsed, latestToolName);
+    if (messageRole(candidate) === "tool") {
+      if (latestToolIndex === -1) {
+        latestToolIndex = i;
+        const parsed = parseToolResult(candidate.content);
+        latestToolResult = parsed;
+        latestToolName = inferToolName(parsed, latestToolName);
+      }
+      continue;
+    }
+    if (messageRole(candidate) !== "assistant") continue;
+    const calls = (candidate.toolCalls ?? candidate.tool_calls ?? []) as Array<{
+      name?: string;
+      function?: { name?: string };
+    }>;
+    if (calls.length === 0) continue;
+    latestAssistantToolCallIndex = i;
+    if (latestToolIndex === -1) {
+      const callName = calls[0]?.function?.name ?? calls[0]?.name;
+      if (callName) latestToolName = callName;
+    }
     break;
   }
-  const hasToolResult = latestToolResult !== undefined;
+
+  const hasToolResult =
+    latestToolResult !== undefined &&
+    (!isRunning || latestToolIndex > latestAssistantToolCallIndex);
   const hasBrief = Boolean(brief);
 
   if (!isRunning) {
