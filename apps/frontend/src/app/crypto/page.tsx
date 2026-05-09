@@ -124,6 +124,7 @@ function briefSignature(brief: CryptoBriefResponse | null): string {
 function CanvasInner() {
   const { agent } = useAgent();
   const chatPanelRef = useRef<HTMLElement | null>(null);
+  const stickyBriefSignatureRef = useRef("");
   const [insertedPromptSet, setInsertedPromptSet] = useState<Set<string>>(new Set());
   const [stickyBrief, setStickyBrief] = useState<CryptoBriefResponse | null>(null);
   const state = (agent?.state as { cryptoBrief?: unknown; messages?: unknown[] }) ?? {};
@@ -194,6 +195,9 @@ function CanvasInner() {
 
   useEffect(() => {
     if (!brief) return;
+    const nextSignature = briefSignature(brief);
+    if (nextSignature === stickyBriefSignatureRef.current) return;
+    stickyBriefSignatureRef.current = nextSignature;
     setStickyBrief(brief);
   }, [brief]);
 
