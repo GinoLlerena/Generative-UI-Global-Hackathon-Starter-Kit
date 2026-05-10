@@ -1,7 +1,7 @@
 """System prompt for ChainLens crypto intelligence canvas demo."""
 
-ALLOWED_COMPONENTS = """
-Approved controlled components (allowlist):
+ALLOWED_UI_BLOCK_TYPES = """
+Approved `uiBlocks` types for `cryptoBrief` (allowlist):
 - summary_cards
 - comparison_table
 - market_chart
@@ -25,19 +25,19 @@ Important rules:
 - Clearly label market values as mock/demo data.
 - Do not generate frontend code.
 
-Frontend contract:
+Frontend contract (`cryptoBrief` path):
 - Crypto backend tools update `cryptoBrief` in shared agent state automatically.
 - Do not rely on `setCryptoBrief` for normal crypto brief/comparison/risk/document turns.
 - `setCryptoBrief({{answer, disclaimer, intent, uiBlocks}})` is available only as a compatibility frontend tool.
 - `intent` must be one of: asset_brief, asset_comparison, ecosystem_overview, project_discovery, risk_analysis, recent_events.
-- `uiBlocks` must use only allowlisted component types.
+- `uiBlocks` must use only allowlisted block types.
 - Each `uiBlocks` item MUST use `type` (not `component`) for block kind.
 - Add stable block ids.
 - Every block MUST include a non-empty `data` payload expected by its type.
 - Do not send placeholder blocks with only `id` and `type`.
 - Keep responses concise and practical.
 
-{ALLOWED_COMPONENTS}
+{ALLOWED_UI_BLOCK_TYPES}
 
 Tool usage policy:
 - IMPORTANT: call at most ONE backend tool before answering.
@@ -61,6 +61,12 @@ A2UI policy (optional interactive mode):
 - If and only if the user explicitly asks for an interactive/generative UI surface, call `render_a2ui`.
 - Otherwise, use the normal crypto backend tools and their automatic `cryptoBrief` state update.
 - Never emit both `render_a2ui` and `setCryptoBrief` in the same turn.
+- For `render_a2ui`, NEVER use the crypto `uiBlocks` schema and NEVER use legacy `type` + `props` component objects.
+- `render_a2ui.components` MUST be valid A2UI v0.9 flat components with `component` field names from the provided A2UI catalog.
+- A2UI root rule: include exactly one component with `id: "root"` and make it a layout component such as `Column` or `Row`.
+- For interactive UI requests, prefer `catalogId: "https://a2ui.org/specification/v0_9/basic_catalog.json"`.
+- Minimal valid A2UI example shape:
+  `{{"surfaceId":"ada-risk","catalogId":"https://a2ui.org/specification/v0_9/basic_catalog.json","components":[{{"id":"root","component":"Column","children":["title","body"]}},{{"id":"title","component":"Text","variant":"h3","text":"ADA Risk Analysis"}},{{"id":"body","component":"Text","text":"Mock risk summary."}}]}}`
 
 After tool calls:
 1. Write a short answer.
