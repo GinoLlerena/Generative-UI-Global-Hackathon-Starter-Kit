@@ -219,6 +219,95 @@ def build_signals_brief(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def build_interactive_risk_brief(payload: dict[str, Any]) -> dict[str, Any]:
+    asset = payload.get("asset") or {}
+    snapshot = payload.get("snapshot") or {}
+    signals = payload.get("signals") or []
+    symbol = asset.get("symbol") or asset.get("name") or "Asset"
+    risk = snapshot.get("riskLevel") or "medium"
+
+    return {
+        "answer": (
+            f"Generated an interactive risk view for {symbol} from the mock "
+            "dataset. The canvas shows the risk score, drivers, and related "
+            "signals without relying on model-authored A2UI JSON."
+        ),
+        "disclaimer": payload.get("disclaimer") or DEFAULT_DISCLAIMER,
+        "intent": "risk_analysis",
+        "uiBlocks": [
+            {
+                "id": f"{str(symbol).lower()}-interactive-risk-summary",
+                "type": "summary_cards",
+                "title": f"{symbol} interactive risk summary",
+                "order": 1,
+                "source": "derived",
+                "isMockData": True,
+                "data": [
+                    {
+                        "label": "Risk score",
+                        "value": str(_risk_score(risk)),
+                        "trend": _risk_trend(risk),
+                        "description": "Deterministic score from demo risk level",
+                    },
+                    {
+                        "label": "Risk level",
+                        "value": str(risk),
+                        "trend": _risk_trend(risk),
+                        "description": "Mock dataset classification",
+                    },
+                    {
+                        "label": "Signals",
+                        "value": str(len(signals)),
+                        "trend": "neutral",
+                        "description": "Signals included in this generated view",
+                    },
+                ],
+            },
+            {
+                "id": f"{str(symbol).lower()}-interactive-risk-panel",
+                "type": "risk_panel",
+                "title": f"{symbol} deterministic risk panel",
+                "order": 2,
+                "source": "derived",
+                "isMockData": True,
+                "data": {
+                    "riskLevel": risk,
+                    "score": _risk_score(risk),
+                    "reasons": [
+                        signal.get("label", "Market signal") for signal in signals
+                    ]
+                    or ["No explicit risk signals found for this asset"],
+                    "mitigations": [
+                        "Treat this generated view as demo data only",
+                        "Compare against BTC and ETH before deeper analysis",
+                        "Inspect liquidity and volatility before making conclusions",
+                    ],
+                },
+            },
+            {
+                "id": f"{str(symbol).lower()}-interactive-risk-signals",
+                "type": "signal_list",
+                "title": f"{symbol} generated signal stack",
+                "order": 3,
+                "source": "derived",
+                "isMockData": True,
+                "data": [
+                    {
+                        "label": signal.get("label", "Signal"),
+                        "sentiment": signal.get("sentiment", "neutral"),
+                        "description": signal.get(
+                            "description", "No description available."
+                        ),
+                        "relatedAssetIds": signal.get("relatedAssetIds", []),
+                        "relatedProjectIds": signal.get("relatedProjectIds", []),
+                    }
+                    for signal in signals
+                ],
+            },
+        ],
+    }
+
+
 def build_token_doc_brief(payload: dict[str, Any]) -> dict[str, Any]:
     symbol = payload.get("symbol") or "Token"
     document = payload.get("document") or {}

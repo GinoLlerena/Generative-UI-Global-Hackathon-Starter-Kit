@@ -15,6 +15,7 @@ from .crypto_brief import (
     build_asset_brief,
     build_comparison_brief,
     build_events_brief,
+    build_interactive_risk_brief,
     build_projects_brief,
     build_signals_brief,
     build_token_doc_brief,
@@ -259,6 +260,42 @@ def get_risk_signals(
 
 
 @tool
+def render_crypto_risk_a2ui(
+    asset_symbol: Annotated[str, "Symbol/id/name like ADA, BTC, ETH, MIN, SNEK, IAG"],
+    tool_call_id: Annotated[str, InjectedToolCallId] = "",
+) -> Command:
+    """Render the deterministic interactive crypto risk demo for one asset.
+
+    Use this for explicit requests like "generate an interactive UI" or
+    "show a generative UI" for crypto risk analysis. It updates shared
+    cryptoBrief state directly instead of asking the model to hand-author
+    arbitrary A2UI JSON.
+    """
+    aid = _resolve_symbol(asset_symbol)
+    asset = next((x for x in _DATA["assets"] if x["id"] == aid), None)
+    snap = next((x for x in _DATA["marketSnapshots"] if x["assetId"] == aid), None)
+    signals = [
+        s
+        for s in _DATA["riskSignals"]
+        if aid in s.get("relatedAssetIds", [])
+    ]
+    payload = {
+        "asset": asset,
+        "snapshot": snap,
+        "signals": signals,
+        "disclaimer": _DATA["disclaimer"],
+    }
+    brief = build_interactive_risk_brief(payload)
+    symbol = (asset or {}).get("symbol", asset_symbol.upper())
+    return _canvas_command(
+        tool_name="render_crypto_risk_a2ui",
+        tool_call_id=tool_call_id,
+        brief=brief,
+        message=f"{symbol} deterministic interactive risk view rendered; canvas updated.",
+    )
+
+
+@tool
 def get_token_document(
     token_symbol: Annotated[str, "Token symbol, e.g. ADA, BTC, ETH"],
     tool_call_id: Annotated[str, InjectedToolCallId] = "",
@@ -398,4 +435,5 @@ def load_crypto_tools() -> list:
         get_cardano_projects,
         get_ecosystem_events,
         get_risk_signals,
+        render_crypto_risk_a2ui,
     ]

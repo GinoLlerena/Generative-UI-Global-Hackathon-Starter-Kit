@@ -51,8 +51,8 @@ export const demoConversationScript = [
   {
     title: "Generative UI mode",
     message: "Generate an interactive UI for ADA risk analysis.",
-    expectedTool: "render_a2ui",
-    expectedResult: "Interactive A2UI surface rendered in chat/canvas.",
+    expectedTool: "render_crypto_risk_a2ui",
+    expectedResult: "Deterministic interactive risk view rendered in chat/canvas.",
   },
 ];
 

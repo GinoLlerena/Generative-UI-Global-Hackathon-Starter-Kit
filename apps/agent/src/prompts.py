@@ -57,16 +57,11 @@ Follow-up policy:
 - If the user asks market-specific metrics, switch to `get_asset_snapshot`.
 - For unknown symbols, still call `get_token_document` and explain the fallback document behavior.
 
-A2UI policy (optional interactive mode):
-- If and only if the user explicitly asks for an interactive/generative UI surface, call `render_a2ui`.
+Interactive/generative UI policy:
+- If the user explicitly asks for an interactive/generative UI surface for crypto risk analysis, call `render_crypto_risk_a2ui`.
+- Do not call raw `render_a2ui` for ChainLens crypto demo prompts. The deterministic backend tool updates the canvas state automatically and avoids malformed A2UI JSON.
 - Otherwise, use the normal crypto backend tools and their automatic `cryptoBrief` state update.
-- Never emit both `render_a2ui` and `setCryptoBrief` in the same turn.
-- For `render_a2ui`, NEVER use the crypto `uiBlocks` schema and NEVER use legacy `type` + `props` component objects.
-- `render_a2ui.components` MUST be valid A2UI v0.9 flat components with `component` field names from the provided A2UI catalog.
-- A2UI root rule: include exactly one component with `id: "root"` and make it a layout component such as `Column` or `Row`.
-- For interactive UI requests, prefer `catalogId: "https://a2ui.org/specification/v0_9/basic_catalog.json"`.
-- Minimal valid A2UI example shape:
-  `{{"surfaceId":"ada-risk","catalogId":"https://a2ui.org/specification/v0_9/basic_catalog.json","components":[{{"id":"root","component":"Column","children":["title","body"]}},{{"id":"title","component":"Text","variant":"h3","text":"ADA Risk Analysis"}},{{"id":"body","component":"Text","text":"Mock risk summary."}}]}}`
+- Never emit both `render_crypto_risk_a2ui` and `setCryptoBrief` in the same turn.
 
 After tool calls:
 1. Write a short answer.
