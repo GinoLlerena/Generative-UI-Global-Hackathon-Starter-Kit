@@ -55,7 +55,8 @@ function isCryptoToolPayload(payload: unknown): payload is {
   cryptoBrief?: CryptoBriefResponse;
   cryptoProcess?: CryptoProcessSummary;
 } {
-  return Boolean(payload) && typeof payload === "object";
+  if (!payload || typeof payload !== "object") return false;
+  return "cryptoBrief" in payload || "cryptoProcess" in payload;
 }
 
 function chooseMessageHistory(
@@ -98,7 +99,18 @@ export function CryptoCompanionMessage({
 
   if (roleOf(message) === "tool" && typeof message.content === "string") {
     const parsed = parseToolResult(message.content);
-    if (!isCryptoToolPayload(parsed)) return null;
+    if (!isCryptoToolPayload(parsed)) {
+      const derivedBrief = buildCryptoBriefFromMessages(messages);
+      if (!derivedBrief) return null;
+      return (
+        <CryptoBriefCompanion
+          brief={derivedBrief}
+          process={buildCryptoProcessFromMessages(messages, derivedBrief)}
+          compact
+          showProcess={false}
+        />
+      );
+    }
 
     const brief = parsed.cryptoBrief;
     const process =
